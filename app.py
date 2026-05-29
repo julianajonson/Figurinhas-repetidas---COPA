@@ -1,42 +1,24 @@
 import os
 import re
-import sqlite3
 import uuid
 
 import pandas as pd
 import streamlit as st
 from PIL import Image
+from supabase import create_client
 
 try:
     from ocr import extrair_codigos
 except Exception as erro:
-    import streamlit as st
     st.error("Erro ao importar OCR")
     st.write(str(erro))
     extrair_codigos = None
 
 
-DB_NAME = "figurinhas.db"
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
-
-def conectar():
-    return sqlite3.connect(DB_NAME)
-
-
-def criar_tabela():
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS figurinhas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            codigo TEXT UNIQUE NOT NULL,
-            quantidade INTEGER DEFAULT 1
-        )
-    """)
-
-    conn.commit()
-    conn.close()
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 def normalizar_codigo(codigo):
@@ -57,38 +39,28 @@ def cadastrar_figurinha(codigo, quantidade=1):
     if not codigo:
         return False
 
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT quantidade FROM figurinhas WHERE codigo = ?",
-        (codigo,)
+    existente = (
+        supabase.table("figurinhas")
+        .select("*")
+        .eq("codigo", codigo)
+        .execute()
     )
 
-    existente = cursor.fetchone()
+    if existente.data:
+        atual = existente.data[0]
+        nova_quantidade = atual["quantidade"] + quantidade
 
-    if existente:
-        nova_quantidade = existente[0] + quantidade
+        supabase.table("figurinhas").update(
+            {"quantidade": nova_quantidade}
+        ).eq("codigo", codigo).execute()
 
-        cursor.execute(
-            """
-            UPDATE figurinhas
-            SET quantidade = ?
-            WHERE codigo = ?
-            """,
-            (nova_quantidade, codigo)
-        )
     else:
-        cursor.execute(
-            """
-            INSERT INTO figurinhas (codigo, quantidade)
-            VALUES (?, ?)
-            """,
-            (codigo, quantidade)
-        )
-
-    conn.commit()
-    conn.close()
+        supabase.table("figurinhas").insert(
+            {
+                "codigo": codigo,
+                "quantidade": quantidade,
+            }
+        ).execute()
 
     return True
 
@@ -99,43 +71,29 @@ def buscar_figurinha(codigo):
     if not codigo:
         return None
 
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        SELECT codigo, quantidade
-        FROM figurinhas
-        WHERE codigo = ?
-        """,
-        (codigo,)
+    resultado = (
+        supabase.table("figurinhas")
+        .select("*")
+        .eq("codigo", codigo)
+        .execute()
     )
 
-    resultado = cursor.fetchone()
+    if resultado.data:
+        return resultado.data[0]
 
-    conn.close()
-
-    return resultado
+    return None
 
 
 def listar_figurinhas():
-    conn = conectar()
-
-    df = pd.read_sql_query(
-        """
-        SELECT codigo, quantidade
-        FROM figurinhas
-        ORDER BY codigo
-        """,
-        conn
+    resultado = (
+        supabase.table("figurinhas")
+        .select("codigo, quantidade")
+        .order("codigo")
+        .execute()
     )
 
-    conn.close()
+    return pd.DataFrame(resultado.data)
 
-    return df
-
-
-criar_tabela()
 
 st.set_page_config(
     page_title="Figurinhas da Copa",
@@ -180,7 +138,7 @@ if menu == "Cadastrar por foto":
         st.image(
             imagem,
             caption="Foto enviada",
-            use_container_width=True
+            width="stretch"
         )
 
         if extrair_codigos:
@@ -233,7 +191,6 @@ if menu == "Cadastrar por foto":
             invalidas = []
 
             for codigo in codigos:
-
                 sucesso = cadastrar_figurinha(codigo, 1)
 
                 if sucesso:
@@ -244,9 +201,7 @@ if menu == "Cadastrar por foto":
             st.success(f"{cadastradas} figurinhas cadastradas.")
 
             if invalidas:
-                st.warning(
-                    "Inválidas: " + ", ".join(invalidas)
-                )
+                st.warning("Inválidas: " + ", ".join(invalidas))
 
 
 elif menu == "Cadastrar manualmente":
@@ -291,8 +246,8 @@ elif menu == "Buscar figurinha":
         resultado = buscar_figurinha(codigo)
 
         if resultado:
-            st.success(f"Você possui {resultado[0]}")
-            st.write(f"Quantidade: {resultado[1]}")
+            st.success(f"Você possui {resultado['codigo']}")
+            st.write(f"Quantidade: {resultado['quantidade']}")
         else:
             st.error("Figurinha não encontrada.")
 
