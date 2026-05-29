@@ -75,12 +75,10 @@ def cadastrar_figurinha(codigo, quantidade=1):
             """,
             (nova_quantidade, codigo)
         )
-
     else:
         cursor.execute(
             """
-            INSERT INTO figurinhas
-            (codigo, quantidade)
+            INSERT INTO figurinhas (codigo, quantidade)
             VALUES (?, ?)
             """,
             (codigo, quantidade)
@@ -168,13 +166,8 @@ if menu == "Cadastrar por foto":
         os.makedirs("uploads", exist_ok=True)
 
         extensao = foto.name.split(".")[-1]
-
         nome_arquivo = f"{uuid.uuid4()}.{extensao}"
-
-        caminho = os.path.join(
-            "uploads",
-            nome_arquivo
-        )
+        caminho = os.path.join("uploads", nome_arquivo)
 
         with open(caminho, "wb") as arquivo:
             arquivo.write(foto.getbuffer())
@@ -189,60 +182,40 @@ if menu == "Cadastrar por foto":
 
         if extrair_codigos:
 
-    if st.button("🔍 Detectar códigos automaticamente"):
+            if st.button("🔍 Detectar códigos automaticamente"):
 
-        try:
-            codigos_detectados = extrair_codigos(caminho)
+                try:
+                    codigos_detectados = extrair_codigos(caminho)
 
-            if codigos_detectados:
+                    if codigos_detectados:
+                        st.success(
+                            f"{len(codigos_detectados)} códigos detectados"
+                        )
 
-                st.success(
-                    f"{len(codigos_detectados)} códigos detectados"
-                )
+                        st.session_state["codigos_detectados"] = "\n".join(
+                            codigos_detectados
+                        )
 
-                st.session_state[
-                    "codigos_detectados"
-                ] = "\n".join(codigos_detectados)
+                    else:
+                        st.warning("Nenhum código detectado.")
+                        st.session_state["codigos_detectados"] = ""
 
-            else:
+                except Exception as erro:
+                    st.error(
+                        "Não foi possível usar o OCR automático neste ambiente."
+                    )
+                    st.info("Digite os códigos manualmente abaixo.")
+                    st.write(str(erro))
+                    st.session_state["codigos_detectados"] = ""
 
-                st.warning(
-                    "Nenhum código detectado."
-                )
-
-                st.session_state[
-                    "codigos_detectados"
-                ] = ""
-
-        except Exception as erro:
-
-            st.error(
-                "Não foi possível usar o OCR automático neste ambiente."
-            )
-
-            st.info(
-                "Digite os códigos manualmente abaixo."
-            )
-
-            st.write(str(erro))
-
-            st.session_state[
-                "codigos_detectados"
-            ] = ""
+        else:
+            st.warning("OCR não está disponível neste ambiente.")
 
         codigos_texto = st.text_area(
             "Confirme ou edite os códigos",
-            value=st.session_state.get(
-                "codigos_detectados",
-                ""
-            ),
+            value=st.session_state.get("codigos_detectados", ""),
             height=180,
-            placeholder="""
-SWE 2
-BIH 10
-BIH 8
-TUN 13
-"""
+            placeholder="SWE 2\nBIH 10\nBIH 8\nTUN 13"
         )
 
         if st.button("Cadastrar figurinhas da foto"):
@@ -254,30 +227,22 @@ TUN 13
             ]
 
             cadastradas = 0
-
             invalidas = []
 
             for codigo in codigos:
 
-                sucesso = cadastrar_figurinha(
-                    codigo,
-                    1
-                )
+                sucesso = cadastrar_figurinha(codigo, 1)
 
                 if sucesso:
                     cadastradas += 1
                 else:
                     invalidas.append(codigo)
 
-            st.success(
-                f"{cadastradas} figurinhas cadastradas."
-            )
+            st.success(f"{cadastradas} figurinhas cadastradas.")
 
             if invalidas:
-
                 st.warning(
-                    "Inválidas: "
-                    + ", ".join(invalidas)
+                    "Inválidas: " + ", ".join(invalidas)
                 )
 
 
@@ -304,13 +269,9 @@ elif menu == "Cadastrar manualmente":
         )
 
         if sucesso:
-            st.success(
-                "Figurinha cadastrada."
-            )
+            st.success("Figurinha cadastrada.")
         else:
-            st.error(
-                "Código inválido."
-            )
+            st.error("Código inválido.")
 
 
 elif menu == "Buscar figurinha":
@@ -324,43 +285,24 @@ elif menu == "Buscar figurinha":
 
     if st.button("Buscar"):
 
-        resultado = buscar_figurinha(
-            codigo
-        )
+        resultado = buscar_figurinha(codigo)
 
         if resultado:
-
-            st.success(
-                f"Você possui {resultado[0]}"
-            )
-
-            st.write(
-                f"Quantidade: {resultado[1]}"
-            )
-
+            st.success(f"Você possui {resultado[0]}")
+            st.write(f"Quantidade: {resultado[1]}")
         else:
-
-            st.error(
-                "Figurinha não encontrada."
-            )
+            st.error("Figurinha não encontrada.")
 
 
 elif menu == "Listar repetidas":
 
-    st.header(
-        "Figurinhas repetidas"
-    )
+    st.header("Figurinhas repetidas")
 
     df = listar_figurinhas()
 
     if df.empty:
-
-        st.info(
-            "Nenhuma figurinha cadastrada."
-        )
-
+        st.info("Nenhuma figurinha cadastrada.")
     else:
-
         st.dataframe(
             df,
             use_container_width=True
