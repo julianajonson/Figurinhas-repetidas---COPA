@@ -189,33 +189,46 @@ if menu == "Cadastrar por foto":
 
         if extrair_codigos:
 
-            if st.button("🔍 Detectar códigos automaticamente"):
+    if st.button("🔍 Detectar códigos automaticamente"):
 
-                codigos_detectados = extrair_codigos(
-                    caminho
+        try:
+            codigos_detectados = extrair_codigos(caminho)
+
+            if codigos_detectados:
+
+                st.success(
+                    f"{len(codigos_detectados)} códigos detectados"
                 )
 
-                if codigos_detectados:
+                st.session_state[
+                    "codigos_detectados"
+                ] = "\n".join(codigos_detectados)
 
-                    st.success(
-                        f"{len(codigos_detectados)} códigos detectados"
-                    )
+            else:
 
-                    st.session_state[
-                        "codigos_detectados"
-                    ] = "\n".join(
-                        codigos_detectados
-                    )
+                st.warning(
+                    "Nenhum código detectado."
+                )
 
-                else:
+                st.session_state[
+                    "codigos_detectados"
+                ] = ""
 
-                    st.warning(
-                        "Nenhum código detectado."
-                    )
+        except Exception as erro:
 
-                    st.session_state[
-                        "codigos_detectados"
-                    ] = ""
+            st.error(
+                "Não foi possível usar o OCR automático neste ambiente."
+            )
+
+            st.info(
+                "Digite os códigos manualmente abaixo."
+            )
+
+            st.write(str(erro))
+
+            st.session_state[
+                "codigos_detectados"
+            ] = ""
 
         codigos_texto = st.text_area(
             "Confirme ou edite os códigos",
