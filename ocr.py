@@ -1,6 +1,12 @@
 import re
 import cv2
 import easyocr
+import streamlit as st
+
+
+@st.cache_resource
+def carregar_reader():
+    return easyocr.Reader(["en"], gpu=False)
 
 
 def normalizar_codigo(codigo):
@@ -17,7 +23,7 @@ def normalizar_codigo(codigo):
 
 def extrair_codigos(imagem_path):
     try:
-        reader = easyocr.Reader(["en"], gpu=False)
+        reader = carregar_reader()
 
         imagem = cv2.imread(imagem_path)
 
@@ -42,5 +48,6 @@ def extrair_codigos(imagem_path):
         return sorted(list(set(codigos)))
 
     except Exception as erro:
-        print("Erro no OCR:", erro)
+        st.error("Erro no OCR.")
+        st.write(str(erro))
         return []
