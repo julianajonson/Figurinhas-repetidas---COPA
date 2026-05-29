@@ -1,12 +1,8 @@
 import re
 import cv2
-import easyocr
-import streamlit as st
+from rapidocr_onnxruntime import RapidOCR
 
-
-@st.cache_resource
-def carregar_reader():
-    return easyocr.Reader(["en"], gpu=False)
+ocr = RapidOCR()
 
 
 def normalizar_codigo(codigo):
@@ -23,31 +19,29 @@ def normalizar_codigo(codigo):
 
 def extrair_codigos(imagem_path):
     try:
-        reader = carregar_reader()
+        img = cv2.imread(imagem_path)
 
-        imagem = cv2.imread(imagem_path)
-
-        if imagem is None:
+        if img is None:
             return []
 
-        resultados = reader.readtext(imagem)
+        result, _ = ocr(img)
 
         codigos = []
 
-        for resultado in resultados:
-            texto = resultado[1].upper()
+        if result:
+            for item in result:
+                texto = item[1].upper()
 
-            encontrados = re.findall(r"\b[A-Z]{3}\s?\d{1,2}\b", texto)
+                encontrados = re.findall(r"\b[A-Z]{3}\s?\d{1,2}\b", texto)
 
-            for item in encontrados:
-                codigo = normalizar_codigo(item)
+                for encontrado in encontrados:
+                    codigo = normalizar_codigo(encontrado)
 
-                if codigo:
-                    codigos.append(codigo)
+                    if codigo:
+                        codigos.append(codigo)
 
         return sorted(list(set(codigos)))
 
     except Exception as erro:
-        st.error("Erro no OCR.")
-        st.write(str(erro))
+        print("Erro OCR:", erro)
         return []
