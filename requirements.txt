@@ -1,8 +1,6 @@
 streamlit
 pandas
 pillow
-easyocr
 opencv-python-headless
-numpy
-torch
-torchvision
+rapidocr-onnxruntime
+onnxruntime
