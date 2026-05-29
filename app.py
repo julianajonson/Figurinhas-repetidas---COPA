@@ -9,7 +9,10 @@ from PIL import Image
 
 try:
     from ocr import extrair_codigos
-except Exception:
+except Exception as erro:
+    import streamlit as st
+    st.error("Erro ao importar OCR")
+    st.write(str(erro))
     extrair_codigos = None
 
 
