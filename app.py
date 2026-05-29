@@ -9,7 +9,7 @@ from PIL import Image
 
 try:
     from ocr import extrair_codigos
-except ImportError:
+except Exception:
     extrair_codigos = None
 
 

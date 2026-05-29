@@ -2,25 +2,23 @@ import re
 import cv2
 import easyocr
 
-reader = easyocr.Reader(['en'])
-
 
 def normalizar_codigo(codigo):
     codigo = codigo.upper().strip()
-    codigo = re.sub(r'\s+', ' ', codigo)
+    codigo = re.sub(r"\s+", " ", codigo)
 
-    match = re.search(r'\b([A-Z]{3})\s?(\d{1,2})\b', codigo)
+    match = re.search(r"\b([A-Z]{3})\s?(\d{1,2})\b", codigo)
 
     if match:
-        letras = match.group(1)
-        numero = match.group(2)
-        return f"{letras} {numero}"
+        return f"{match.group(1)} {match.group(2)}"
 
     return None
 
 
 def extrair_codigos(imagem_path):
     try:
+        reader = easyocr.Reader(["en"], gpu=False)
+
         imagem = cv2.imread(imagem_path)
 
         if imagem is None:
@@ -28,14 +26,12 @@ def extrair_codigos(imagem_path):
 
         resultados = reader.readtext(imagem)
 
-        textos = [resultado[1] for resultado in resultados]
-
         codigos = []
 
-        for texto in textos:
-            texto = texto.upper()
+        for resultado in resultados:
+            texto = resultado[1].upper()
 
-            encontrados = re.findall(r'\b[A-Z]{3}\s?\d{1,2}\b', texto)
+            encontrados = re.findall(r"\b[A-Z]{3}\s?\d{1,2}\b", texto)
 
             for item in encontrados:
                 codigo = normalizar_codigo(item)
@@ -46,5 +42,5 @@ def extrair_codigos(imagem_path):
         return sorted(list(set(codigos)))
 
     except Exception as erro:
-        print("Erro OCR:", erro)
+        print("Erro no OCR:", erro)
         return []
