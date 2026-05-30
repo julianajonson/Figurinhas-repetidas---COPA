@@ -83,6 +83,20 @@ def buscar_figurinha(codigo):
 
     return None
 
+def excluir_figurinha(codigo):
+    codigo = normalizar_codigo(codigo)
+
+    if not codigo:
+        return False
+
+    resultado = buscar_figurinha(codigo)
+
+    if not resultado:
+        return False
+
+    supabase.table("figurinhas").delete().eq("codigo", codigo).execute()
+
+    return True
 
 def listar_figurinhas():
     resultado = (
@@ -109,6 +123,7 @@ menu = st.sidebar.selectbox(
         "Cadastrar manualmente",
         "Buscar figurinha",
         "Listar repetidas",
+        "Excluir figurinha"
     ],
 )
 
@@ -265,3 +280,42 @@ elif menu == "Listar repetidas":
             df,
             use_container_width=True
         )
+    
+elif menu == "Excluir figurinha":
+
+    st.header("Excluir figurinha")
+
+    codigo = st.text_input(
+        "Digite o código da figurinha que deseja excluir",
+        placeholder="Ex: TUN 13"
+    )
+
+    if st.button("Buscar para excluir"):
+
+        resultado = buscar_figurinha(codigo)
+
+        if resultado:
+            st.session_state["codigo_para_excluir"] = resultado["codigo"]
+            st.success(
+                f"Figurinha encontrada: {resultado['codigo']} | Quantidade: {resultado['quantidade']}"
+            )
+        else:
+            st.error("Figurinha não encontrada.")
+
+    if "codigo_para_excluir" in st.session_state:
+
+        st.warning(
+            f"Tem certeza que deseja excluir {st.session_state['codigo_para_excluir']}?"
+        )
+
+        if st.button("Confirmar exclusão"):
+
+            sucesso = excluir_figurinha(
+                st.session_state["codigo_para_excluir"]
+            )
+
+            if sucesso:
+                st.success("Figurinha excluída com sucesso.")
+                del st.session_state["codigo_para_excluir"]
+            else:
+                st.error("Erro ao excluir figurinha.")
