@@ -7,6 +7,29 @@ import streamlit as st
 from PIL import Image
 from supabase import create_client
 
+import streamlit as st
+
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+
+if not st.session_state.autenticado:
+
+    senha = st.text_input(
+        "Senha",
+        type="password"
+    )
+
+    if st.button("Entrar"):
+
+        if senha == st.secrets["APP_PASSWORD"]:
+            st.session_state.autenticado = True
+            st.rerun()
+
+        else:
+            st.error("Senha incorreta.")
+
+    st.stop()
+
 try:
     from ocr import extrair_codigos
 except Exception as erro:
